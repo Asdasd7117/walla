@@ -1,0 +1,57 @@
+workflows:
+  release-builds:
+    name: APK + AAB + IPA (حجم صغير)
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        # هذه المتغيرات اختيارية، يمكن تعديلها من لوحة تحكم Codemagic
+        PACKAGE_NAME: "com.yourservices.yemen"
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/.gradle/caches
+        - $HOME/Library/Caches/CocoaPods
+    scripts:
+      - name: تهيئة المشروع وتنظيف الملفات المؤقتة
+        script: |
+          flutter clean
+          flutter pub get
+
+      - name: 📱 بناء APK (مقسم للمعماريات لتقليل الحجم بنسبة 30-40%)
+        script: |
+          flutter build apk --release \
+            --split-per-abi \
+            --tree-shake-icons \
+            --split-debug-info=build/debug-info
+
+      - name: 📦 بناء App Bundle (الأفضل لمتجر Google Play)
+        script: |
+          flutter build appbundle --release \
+            --tree-shake-icons \
+            --split-debug-info=build/debug-info
+
+      - name: 🍎 بناء IPA (لأجهزة iOS)
+        script: |
+          flutter build ipa --release \
+            --tree-shake-icons \
+            --split-debug-info=build/debug-info
+
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
