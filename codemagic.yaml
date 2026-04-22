@@ -1,22 +1,37 @@
-name: Flutter Build
+workflows:
+  android-apk-only:
+    name: APK Only (Fastest)
+    environment:
+      flutter: stable
+      vars:
+        PACKAGE_NAME: "com.yourservices.yemen"
+    
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    
+    cache:
+      cache_paths: []
+    
+    scripts:
+      - name: تنظيف
+        script: |
+          flutter clean
+          rm -rf .dart_tool build/
+          flutter pub get
 
-on:
-  push:
-    branches: [ main ]
+      - name: بناء APK فقط
+        script: |
+          flutter build apk --release
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.x'
-      
-      - run: flutter pub get
-      - run: flutter build apk --release
-      
-      - uses: actions/upload-artifact@v3
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
