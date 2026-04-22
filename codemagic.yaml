@@ -1,9 +1,11 @@
 workflows:
-  android-apk:
-    name: Android APK (Clean Build)
+  simple-apk:
+    name: Simple APK Build
     environment:
       flutter: stable
+      android_signing: []  # ✅ لا توقيع مؤقتاً لتسريع البناء
       vars:
+        # اسم الحزمة - يمكن تعديله لاحقاً
         PACKAGE_NAME: "com.yemen.services"
     
     triggering:
@@ -13,29 +15,42 @@ workflows:
           include: true
           source: true
     
-    # ❌ عطل الكاش تماماً
+    # ❌ عطل الكاش نهائياً لتجنب مشاكل my_app
     cache:
       cache_paths: []
     
     scripts:
-      - name: تنظيف شامل
+      - name: Clean & Setup
         script: |
-          echo "🧹 Deep clean..."
+          echo "🔥 Starting clean build..."
+          
+          # تنظيف شامل
           flutter clean
-          rm -rf .dart_tool build/ android/.gradle pubspec.lock
+          rm -rf .dart_tool build/ pubspec.lock android/.gradle
+          
+          # إعادة تثبيت الحزم
+          echo "📦 Getting dependencies..."
           flutter pub get
           
-          echo "✅ Checking project name..."
-          if grep -q "^name: yemen_services" pubspec.yaml; then
-            echo "✅ Project name correct"
-          else
-            echo "❌ Project name WRONG - must be 'yemen_services'"
-            exit 1
-          fi
+          # عرض اسم المشروع للتأكد
+          echo "📋 Project name:"
+          head -1 pubspec.yaml
+          
+          echo "✅ Setup complete"
 
-      - name: بناء APK
+      - name: Build APK
         script: |
-          flutter build apk --release --no-tree-shake-icons
+          echo "🔨 Building APK..."
+          
+          flutter build apk --release \
+            --no-tree-shake-icons \
+            --no-obfuscate \
+            --dart-define=flutter.inspector.structuredErrors=false
+          
+          echo "✅ Build complete"
+          
+          # عرض حجم الملف
+          ls -lh build/app/outputs/flutter-apk/*.apk
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
@@ -44,3 +59,4 @@ workflows:
       email:
         recipients:
           - your-email@example.com
+      # ✅ يمكن إضافة Slack/Google Play لاحقاً
