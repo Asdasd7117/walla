@@ -1,32 +1,41 @@
 workflows:
-  android-apk-only:
-    name: APK Only (Fastest)
+  android-apk:
+    name: Android APK (Clean Build)
     environment:
       flutter: stable
       vars:
-        PACKAGE_NAME: "com.yourservices.yemen"
+        PACKAGE_NAME: "com.yemen.services"
     
     triggering:
-      events:
-        - push
+      events: [push]
       branch_patterns:
         - pattern: 'main'
           include: true
           source: true
     
+    # ❌ عطل الكاش تماماً
     cache:
       cache_paths: []
     
     scripts:
-      - name: تنظيف
+      - name: تنظيف شامل
         script: |
+          echo "🧹 Deep clean..."
           flutter clean
-          rm -rf .dart_tool build/
+          rm -rf .dart_tool build/ android/.gradle pubspec.lock
           flutter pub get
+          
+          echo "✅ Checking project name..."
+          if grep -q "^name: yemen_services" pubspec.yaml; then
+            echo "✅ Project name correct"
+          else
+            echo "❌ Project name WRONG - must be 'yemen_services'"
+            exit 1
+          fi
 
-      - name: بناء APK فقط
+      - name: بناء APK
         script: |
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
