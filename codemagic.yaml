@@ -1,13 +1,13 @@
 workflows:
   release-builds:
-    name: APK + AAB + IPA (حجم صغير)
+    name: APK + AAB + IPA (Fixed Build)
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
-        # هذه المتغيرات اختيارية، يمكن تعديلها من لوحة تحكم Codemagic
         PACKAGE_NAME: "com.yourservices.yemen"
+    
     triggering:
       events:
         - push
@@ -16,31 +16,54 @@ workflows:
         - pattern: 'main'
           include: true
           source: true
+    
+    # 🗑️ إعدادات الكاش: سنقوم بتعطيل الكاش المشبوه مؤقتاً
     cache:
-      cache_paths:
-        - $HOME/.pub-cache
-        - $HOME/.gradle/caches
-        - $HOME/Library/Caches/CocoaPods
+      cache_paths: []  # 👈 تفريغ الكاش يحل مشكلة FileSystemException
+    
     scripts:
-      - name: تهيئة المشروع وتنظيف الملفات المؤقتة
+      - name: 🧹 تنظيف شامل وقسري (يحل 99% من أخطاء البناء)
         script: |
+          echo "🔥 Starting deep clean..."
           flutter clean
+          rm -rf .dart_tool
+          rm -rf build/
+          rm -rf android/.gradle
+          rm -rf ios/.symlinks
+          rm -f pubspec.lock
+          rm -rf $HOME/.pub-cache/_temp
+          
+          echo "📦 Re-getting dependencies..."
           flutter pub get
+          flutter pub upgrade
+          
+          echo "✅ Clean complete. Starting build..."
 
-      - name: 📱 بناء APK (مقسم للمعماريات لتقليل الحجم بنسبة 30-40%)
+      - name: 🔍 التحقق من صحة الاستيراد (للتأكد من حل مشكلة Supabase)
+        script: |
+          echo "Checking imports in rating_screen.dart..."
+          if grep -q "import 'package:supabase_flutter/supabase_flutter.dart';" lib/screens/rating_screen.dart; then
+            echo "✅ Supabase import found"
+          else
+            echo "❌ Supabase import MISSING - build will fail"
+            exit 1
+          fi
+
+      - name: 📱 بناء APK (مقسم للمعماريات)
         script: |
           flutter build apk --release \
             --split-per-abi \
             --tree-shake-icons \
-            --split-debug-info=build/debug-info
+            --split-debug-info=build/debug-info \
+            --no-obfuscate
 
-      - name: 📦 بناء App Bundle (الأفضل لمتجر Google Play)
+      - name: 📦 بناء App Bundle
         script: |
           flutter build appbundle --release \
             --tree-shake-icons \
             --split-debug-info=build/debug-info
 
-      - name: 🍎 بناء IPA (لأجهزة iOS)
+      - name: 🍎 بناء IPA
         script: |
           flutter build ipa --release \
             --tree-shake-icons \
