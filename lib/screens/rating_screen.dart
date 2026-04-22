@@ -1,6 +1,7 @@
+// ⚠️ هام جداً: هذه الأسطر يجب أن تكون في أول الملف تماماً
+import 'dart:async';
 import 'package:flutter/material.dart';
-// 👇 هذا الاستيراد كان ناقصاً ويسبب خطأ "Supabase isn't defined"
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 هذا هو السطر الذي يحل مشكلة "Supabase isn't defined"
 
 class RatingScreen extends StatefulWidget {
   final String orderId;
@@ -13,8 +14,7 @@ class RatingScreen extends StatefulWidget {
 class _RatingScreenState extends State<RatingScreen> {
   int _selectedStars = 5;
   bool _isLoading = false;
-  // 👇 نستخدم Map<dynamic, dynamic> لتتوافق مع إرجاع Supabase
-  Map<dynamic, dynamic>? _worker;
+  Map<dynamic, dynamic>? _worker; // 👈 نستخدم dynamic لتجنب أخطاء النوع
 
   @override
   void initState() {
@@ -24,6 +24,7 @@ class _RatingScreenState extends State<RatingScreen> {
 
   Future<void> _fetchWorkerInfo() async {
     try {
+      // ✅ الآن سيتم التعرف على Supabase
       final res = await Supabase.instance.client
           .from('orders')
           .select('profiles!orders_worker_id_fkey(full_name, profession, avg_rating)')
@@ -31,11 +32,10 @@ class _RatingScreenState extends State<RatingScreen> {
           .single();
       
       if (mounted) {
-        // 👇 الحل: استخدام .cast() أو التعامل مع dynamic مباشرة
         setState(() => _worker = res['profiles']);
       }
     } catch (e) {
-      debugPrint('❌ خطأ في جلب بيانات العامل: $e');
+      debugPrint('❌ خطأ: $e');
     }
   }
 
@@ -64,7 +64,7 @@ class _RatingScreenState extends State<RatingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ فشل الإرسال: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
