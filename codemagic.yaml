@@ -1,80 +1,22 @@
-workflows:
-  release-builds:
-    name: APK + AAB + IPA (Fixed Build)
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-      vars:
-        PACKAGE_NAME: "com.yourservices.yemen"
-    
-    triggering:
-      events:
-        - push
-        - tag
-      branch_patterns:
-        - pattern: 'main'
-          include: true
-          source: true
-    
-    # 🗑️ إعدادات الكاش: سنقوم بتعطيل الكاش المشبوه مؤقتاً
-    cache:
-      cache_paths: []  # 👈 تفريغ الكاش يحل مشكلة FileSystemException
-    
-    scripts:
-      - name: 🧹 تنظيف شامل وقسري (يحل 99% من أخطاء البناء)
-        script: |
-          echo "🔥 Starting deep clean..."
-          flutter clean
-          rm -rf .dart_tool
-          rm -rf build/
-          rm -rf android/.gradle
-          rm -rf ios/.symlinks
-          rm -f pubspec.lock
-          rm -rf $HOME/.pub-cache/_temp
-          
-          echo "📦 Re-getting dependencies..."
-          flutter pub get
-          flutter pub upgrade
-          
-          echo "✅ Clean complete. Starting build..."
+name: Flutter Build
 
-      - name: 🔍 التحقق من صحة الاستيراد (للتأكد من حل مشكلة Supabase)
-        script: |
-          echo "Checking imports in rating_screen.dart..."
-          if grep -q "import 'package:supabase_flutter/supabase_flutter.dart';" lib/screens/rating_screen.dart; then
-            echo "✅ Supabase import found"
-          else
-            echo "❌ Supabase import MISSING - build will fail"
-            exit 1
-          fi
+on:
+  push:
+    branches: [ main ]
 
-      - name: 📱 بناء APK (مقسم للمعماريات)
-        script: |
-          flutter build apk --release \
-            --split-per-abi \
-            --tree-shake-icons \
-            --split-debug-info=build/debug-info \
-            --no-obfuscate
-
-      - name: 📦 بناء App Bundle
-        script: |
-          flutter build appbundle --release \
-            --tree-shake-icons \
-            --split-debug-info=build/debug-info
-
-      - name: 🍎 بناء IPA
-        script: |
-          flutter build ipa --release \
-            --tree-shake-icons \
-            --split-debug-info=build/debug-info
-
-    artifacts:
-      - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/bundle/release/*.aab
-      - build/ios/ipa/*.ipa
-
-    publishing:
-      email:
-        recipients:
-          - your-email@example.com
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+      
+      - run: flutter pub get
+      - run: flutter build apk --release
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
